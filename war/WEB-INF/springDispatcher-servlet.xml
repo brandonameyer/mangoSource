@@ -51,6 +51,7 @@
         <prop key="/event_handlers.shtm">eventHandlersController</prop>
         <prop key="/events.shtm">eventsController</prop>
         <prop key="/help.shtm">helpController</prop>
+        <prop key="/landing_page.shtm">landingPageController</prop> <!-- Landing page prop key -->
         <prop key="/login.htm">loginController</prop>
         <prop key="/logout.htm">logoutController</prop>
         <prop key="/mailing_lists.shtm">mailingListsController</prop>
@@ -130,12 +131,17 @@
   <bean id="helpController" class="org.springframework.web.servlet.mvc.ParameterizableViewController">
     <property name="viewName"><value>help</value></property>
   </bean>
+
+  <!-- Bean for landing page controller -->
+  <bean id="landingPageController" class="com.serotonin.mango.web.mvc.controller.LandingPageController">
+    <property name="viewName"><value>landingPage</value></property>
+  </bean>
   
   <bean id="loginController" class="com.serotonin.mango.web.mvc.controller.LoginController">
     <property name="commandName"><value>login</value></property>
     <property name="commandClass"><value>com.serotonin.mango.web.mvc.form.LoginForm</value></property>
     <property name="formView"><value>login</value></property>
-    <property name="successUrl"><value>watch_list.shtm</value></property>
+    <property name="successUrl"><value>landing_page.shtm</value></property> <!-- Landing page as new redirect -->
     <property name="newUserUrl"><value>help.shtm</value></property>
     <property name="bindOnNewForm"><value>true</value></property>
   </bean>
