@@ -47,6 +47,7 @@ import com.serotonin.mango.db.dao.SystemSettingsDao;
 import com.serotonin.mango.rt.dataImage.PointValueTime;
 import com.serotonin.mango.util.mindprod.StripEntities;
 import com.serotonin.util.StringUtils;
+import org.jfree.chart.plot.ValueMarker;
 
 /**
  * @author Matthew Lohbihler
@@ -55,13 +56,28 @@ public class ImageChartUtils {
     private static final int NUMERIC_DATA_INDEX = 0;
     private static final int DISCRETE_DATA_INDEX = 1;
 
-    public static void writeChart(PointTimeSeriesCollection pointTimeSeriesCollection, OutputStream out, int width,
-            int height) throws IOException {
-        writeChart(pointTimeSeriesCollection, pointTimeSeriesCollection.hasMultiplePoints(), out, width, height);
+    // Add a new getChartData function that accepts new properties
+    public static byte[] getChartData(PointTimeSeriesCollection pointTimeSeriesCollection, int width, int height, boolean charttype, String title, String xtitle, String ytitle, double yref) {
+        // Pass new properties to new getChartData
+        return getChartData(pointTimeSeriesCollection, pointTimeSeriesCollection.hasMultiplePoints(), width, height, charttype, title, xtitle, ytitle, yref);
     }
 
     public static byte[] getChartData(PointTimeSeriesCollection pointTimeSeriesCollection, int width, int height) {
         return getChartData(pointTimeSeriesCollection, pointTimeSeriesCollection.hasMultiplePoints(), width, height);
+    }
+
+    // Add new getChartData that accepts new properties
+    public static byte[] getChartData(PointTimeSeriesCollection pointTimeSeriesCollection, boolean showLegend,
+            int width, int height, boolean charttype, String title, String xtitle, String ytitle, double yref) {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            // Send new properties to new wrietChartFull
+            writeChartFull(pointTimeSeriesCollection, showLegend, out, width, height, charttype, title, xtitle, ytitle, yref);
+            return out.toByteArray();
+        }
+        catch (IOException e) {
+            throw new ShouldNeverHappenException(e);
+        }
     }
 
     public static byte[] getChartData(PointTimeSeriesCollection pointTimeSeriesCollection, boolean showLegend,
@@ -76,9 +92,122 @@ public class ImageChartUtils {
         }
     }
 
+    // New writeChartFull that accepts all new properties
+    public static void writeChartFull(PointTimeSeriesCollection pointTimeSeriesCollection, boolean showLegend,
+            OutputStream out, int width, int height, boolean charttype, String title, String xtitle, String ytitle, double yref) throws IOException {
+
+        XYLineAndShapeRenderer numericRenderer;
+        // Set title, x title, y title for chart
+        JFreeChart chart = ChartFactory.createTimeSeriesChart(title, xtitle, ytitle, null, showLegend, false, false);
+        
+        chart.setBackgroundPaint(SystemSettingsDao.getColour(SystemSettingsDao.CHART_BACKGROUND_COLOUR));
+        // Create the y reference line
+        ValueMarker marker = new ValueMarker(yref);
+        marker.setPaint(Color.RED);
+
+        XYPlot plot = chart.getXYPlot();
+        plot.addRangeMarker(marker);
+        plot.setBackgroundPaint(SystemSettingsDao.getColour(SystemSettingsDao.PLOT_BACKGROUND_COLOUR));
+        Color gridlines = SystemSettingsDao.getColour(SystemSettingsDao.PLOT_GRIDLINE_COLOUR);
+        plot.setDomainGridlinePaint(gridlines);
+        plot.setRangeGridlinePaint(gridlines);
+
+        double numericMin = 0;
+        double numericMax = 1;
+        if (pointTimeSeriesCollection.hasNumericData()) {
+            //            XYSplineRenderer numericRenderer = new XYSplineRenderer();
+            //            numericRenderer.setBaseShapesVisible(false);
+            // If the chart type true (line) make a line chart
+            if (charttype == true) {
+                numericRenderer = new XYLineAndShapeRenderer(true, false);
+            }
+            // If scatter make scatter plot (shapes true line false)
+            else {
+                numericRenderer = new XYLineAndShapeRenderer(false, true);
+            }
+
+            plot.setDataset(NUMERIC_DATA_INDEX, pointTimeSeriesCollection.getNumericTimeSeriesCollection());
+            plot.setRenderer(NUMERIC_DATA_INDEX, numericRenderer);
+
+            for (int i = 0; i < pointTimeSeriesCollection.getNumericPaint().size(); i++) {
+                Paint paint = pointTimeSeriesCollection.getNumericPaint().get(i);
+                if (paint != null)
+                    numericRenderer.setSeriesPaint(i, paint, false);
+            }
+
+            numericMin = plot.getRangeAxis().getLowerBound();
+            numericMax = plot.getRangeAxis().getUpperBound();
+
+            if (!pointTimeSeriesCollection.hasMultiplePoints()) {
+                // If this chart displays a single point, check if there should be a range description.
+                TimeSeries timeSeries = pointTimeSeriesCollection.getNumericTimeSeriesCollection().getSeries(0);
+                String desc = timeSeries.getRangeDescription();
+                if (!StringUtils.isEmpty(desc)) {
+                    // Replace any HTML entities with Java equivalents
+                    desc = StripEntities.stripHTMLEntities(desc, ' ');
+                    plot.getRangeAxis().setLabel(desc);
+                }
+            }
+        }
+        else
+            plot.getRangeAxis().setVisible(false);
+
+        if (pointTimeSeriesCollection.hasDiscreteData()) {
+            XYStepRenderer discreteRenderer = new XYStepRenderer();
+            plot.setRenderer(DISCRETE_DATA_INDEX, discreteRenderer, false);
+
+            // Plot the data
+            int discreteValueCount = pointTimeSeriesCollection.getDiscreteValueCount();
+            double interval = (numericMax - numericMin) / (discreteValueCount + 1);
+            TimeSeriesCollection timeSeriesCollection = new TimeSeriesCollection();
+
+            int intervalIndex = 1;
+            for (int i = 0; i < pointTimeSeriesCollection.getDiscreteSeriesCount(); i++) {
+                DiscreteTimeSeries dts = pointTimeSeriesCollection.getDiscreteTimeSeries(i);
+                TimeSeries ts = new TimeSeries(dts.getName(), null, null, Second.class);
+
+                for (PointValueTime pvt : dts.getValueTimes())
+                    ImageChartUtils.addSecond(ts, pvt.getTime(),
+                            numericMin + (interval * (dts.getValueIndex(pvt.getValue()) + intervalIndex)));
+
+                timeSeriesCollection.addSeries(ts);
+
+                intervalIndex += dts.getDiscreteValueCount();
+            }
+
+            plot.setDataset(DISCRETE_DATA_INDEX, timeSeriesCollection);
+
+            // Add the value annotations.
+            double annoX = plot.getDomainAxis().getLowerBound();
+            intervalIndex = 1;
+            for (int i = 0; i < pointTimeSeriesCollection.getDiscreteSeriesCount(); i++) {
+                DiscreteTimeSeries dts = pointTimeSeriesCollection.getDiscreteTimeSeries(i);
+                if (dts.getPaint() != null)
+                    discreteRenderer.setSeriesPaint(i, dts.getPaint());
+
+                for (int j = 0; j < dts.getDiscreteValueCount(); j++) {
+                    XYTextAnnotation anno = new XYTextAnnotation(" " + dts.getValueText(j), annoX, numericMin
+                            + (interval * (j + intervalIndex)));
+                    if (!pointTimeSeriesCollection.hasNumericData() && intervalIndex + j == discreteValueCount)
+                        // This prevents the top label from getting cut off
+                        anno.setTextAnchor(TextAnchor.TOP_LEFT);
+                    else
+                        anno.setTextAnchor(TextAnchor.BOTTOM_LEFT);
+                    anno.setPaint(discreteRenderer.lookupSeriesPaint(i));
+                    plot.addAnnotation(anno);
+                }
+
+                intervalIndex += dts.getDiscreteValueCount();
+            }
+        }
+
+        // Return the image.
+        ChartUtilities.writeChartAsPNG(out, chart, width, height);
+    }
+
+    // Retain old writeChart for consolidated chart support
     public static void writeChart(PointTimeSeriesCollection pointTimeSeriesCollection, boolean showLegend,
             OutputStream out, int width, int height) throws IOException {
-
         JFreeChart chart = ChartFactory.createTimeSeriesChart(null, null, null, null, showLegend, false, false);
         chart.setBackgroundPaint(SystemSettingsDao.getColour(SystemSettingsDao.CHART_BACKGROUND_COLOUR));
 
