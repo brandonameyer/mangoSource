@@ -194,19 +194,32 @@ public class ReportDao extends BaseDao {
     /**
      * This method should only be called by the ReportWorkItem.
      */
+    // Add our new properties for the command that inserts chart property values into the derby database
     private static final String REPORT_INSTANCE_POINTS_INSERT = "insert into reportInstancePoints " //
-            + "(reportInstanceId, dataSourceName, pointName, dataType, startValue, textRenderer, colour, consolidatedChart) "
-            + "values (?,?,?,?,?,?,?,?)";
+            + "(reportInstanceId, dataSourceName, pointName, dataType, startValue, textRenderer, colour, consolidatedChart, charttype, title, xtitle, ytitle, yref) "
+            + "values (?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static class PointInfo {
         private final DataPointVO point;
         private final String colour;
         private final boolean consolidatedChart;
+        // Added new properties to the PointInfo class
+        private final boolean charttype;
+        private final String title;
+        private final String xtitle;
+        private final String ytitle;
+        private final double yref;
 
-        public PointInfo(DataPointVO point, String colour, boolean consolidatedChart) {
+        // Set new properties of the PointInfo class
+        public PointInfo(DataPointVO point, String colour, boolean consolidatedChart, boolean charttype, String title, String xtitle, String ytitle, double yref) {
             this.point = point;
             this.colour = colour;
             this.consolidatedChart = consolidatedChart;
+            this.charttype = charttype;
+            this.title = title;
+            this.xtitle = xtitle;
+            this.ytitle = ytitle;
+            this.yref = yref;
         }
 
         public DataPointVO getPoint() {
@@ -219,6 +232,27 @@ public class ReportDao extends BaseDao {
 
         public boolean isConsolidatedChart() {
             return consolidatedChart;
+        }
+
+        // Added getters for new chart properties
+        public boolean isChartType() {
+            return charttype;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public String getXtitle() {
+            return xtitle;
+        }
+
+        public String getYtitle() {
+            return ytitle;
+        }
+
+        public double getYref() {
+            return yref;
         }
     }
 
@@ -272,11 +306,30 @@ public class ReportDao extends BaseDao {
 
             int reportPointId = doInsert(
                     REPORT_INSTANCE_POINTS_INSERT,
-                    new Object[] { instance.getId(), point.getDeviceName(), name, dataType,
-                            DataTypes.valueToString(startValue),
-                            SerializationHelper.writeObject(point.getTextRenderer()), pointInfo.getColour(),
-                            boolToChar(pointInfo.isConsolidatedChart()) }, new int[] { Types.INTEGER, Types.VARCHAR,
-                            Types.VARCHAR, Types.INTEGER, Types.VARCHAR, Types.BLOB, Types.VARCHAR, Types.CHAR });
+                    // int reportPointId = doInsert(
+                    //     REPORT_INSTANCE_POINTS_INSERT,
+                    //     new Object[] { instance.getId(), point.getDeviceName(), name, dataType,
+                    //             DataTypes.valueToString(startValue),
+                    //             SerializationHelper.writeObject(point.getTextRenderer()), pointInfo.getColour(),
+                    //             boolToChar(pointInfo.isConsolidatedChart()) }, new int[] { Types.INTEGER, Types.VARCHAR,
+                    //             Types.VARCHAR, Types.INTEGER, Types.VARCHAR, Types.BLOB, Types.VARCHAR, Types.CHAR });
+                    // Modify object to include new chart properties with their DB types
+                    new Object[] { 
+                        instance.getId(), point.getDeviceName(), 
+                        name, dataType, 
+                        DataTypes.valueToString(startValue),SerializationHelper.writeObject(point.getTextRenderer()), 
+                        pointInfo.getColour(), boolToChar(pointInfo.isConsolidatedChart()), boolToChar(pointInfo.isChartType()), pointInfo.getTitle(), pointInfo.getXtitle(), pointInfo.getYtitle(), 
+                        pointInfo.getYref() },  
+                        new int[] { 
+                        Types.INTEGER, Types.VARCHAR,
+                        Types.VARCHAR, Types.INTEGER, 
+                        Types.VARCHAR, Types.BLOB, 
+                        Types.VARCHAR, Types.CHAR, 
+                        Types.CHAR, Types.VARCHAR, 
+                        Types.VARCHAR, Types.VARCHAR, 
+                        Types.DOUBLE 
+                    });
+                        
 
             // Insert the reportInstanceData records
             String insertSQL = "insert into reportInstanceData " + "  select id, " + reportPointId
@@ -409,8 +462,9 @@ public class ReportDao extends BaseDao {
      * This method guarantees that the data is provided to the setData handler method grouped by point (points are not
      * ordered), and sorted by time ascending.
      */
+    // Editing the SQL command used to get report data properties from the database to include the new ones
     private static final String REPORT_INSTANCE_POINT_SELECT = "select id, dataSourceName, pointName, dataType, " // 
-            + "startValue, textRenderer, colour, consolidatedChart from reportInstancePoints ";
+            + "startValue, textRenderer, colour, consolidatedChart, charttype, title, xtitle, ytitle, yref from reportInstancePoints ";
     private static final String REPORT_INSTANCE_DATA_SELECT = "select rd.pointValue, rda.textPointValueShort, " //
             + "  rda.textPointValueLong, rd.ts, rda.sourceValue "
             + "from reportInstanceData rd "
@@ -434,6 +488,12 @@ public class ReportDao extends BaseDao {
                                 .getBinaryStream()));
                         rp.setColour(rs.getString(7));
                         rp.setConsolidatedChart(charToBool(rs.getString(8)));
+                        // Added new properties for the report instance by getting the values from the derby database
+                        rp.setcharttype(charToBool(rs.getString(9)));
+                        rp.setTitle(rs.getString(10));
+                        rp.setXtitle(rs.getString(11));
+                        rp.setYtitle(rs.getString(12));
+                        rp.setYref(rs.getDouble(13));
                         return rp;
                     }
                 });
