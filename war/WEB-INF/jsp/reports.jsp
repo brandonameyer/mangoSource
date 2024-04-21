@@ -186,19 +186,19 @@
                       " onchange='updatePointcharttype(" + data.pointId + ", false)'/> Scatter";
                     },
                     function(data) {
-                            return "<input type='text' value='"+ data.title +"' "+
+                            return "<input type='text' maxlength='50' value='"+ data.title +"' "+
                                     "onblur='updatePointTitle("+ data.pointId +", this.value)'/>";
                     },
                     function(data) {
-                            return "<input type='text' value='"+ data.xtitle +"' "+
+                            return "<input type='text' maxlength='50' value='"+ data.xtitle +"' "+
                                     "onblur='updatePointxtitle("+ data.pointId +", this.value)'/>";
                     },
                     function(data) {
-                            return "<input type='text' value='"+ data.ytitle +"' "+
+                            return "<input type='text' maxlength='50' value='"+ data.ytitle +"' "+
                                     "onblur='updatePointytitle("+ data.pointId +", this.value)'/>";
                     },
                     function(data) {
-                            return "<input type='number' value='"+ data.yref +"' "+
+                            return "<input type='number' maxlength='50' value='"+ data.yref +"' "+
                                     "onblur='updatePointyref("+ data.pointId +", this.value)'/>";
                     },
                     function(data) { 
