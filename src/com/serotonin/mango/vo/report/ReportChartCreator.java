@@ -147,7 +147,9 @@ public class ReportChartCreator {
             if (ptsc.hasData()) {
                 if (inlinePrefix != null)
                     model.put("chartName", inlinePrefix + pointStat.getChartName());
-                pointStat.setImageData(ImageChartUtils.getChartData(ptsc, POINT_IMAGE_WIDTH, POINT_IMAGE_HEIGHT));
+                // Pass new properties into ImageChartUtils to make graph
+                pointStat.setImageData(ImageChartUtils.getChartData(ptsc, POINT_IMAGE_WIDTH, POINT_IMAGE_HEIGHT, pointStat.isChartType(), pointStat.getTitle(),
+                pointStat.getXtitle(), pointStat.getYtitle(), pointStat.getYref()));
             }
         }
 
@@ -283,6 +285,53 @@ public class ReportChartCreator {
         private Color numericTimeSeriesColor;
         private DiscreteTimeSeries discreteTimeSeries;
         private byte[] imageData;
+        // Add new properties to PointStatistics
+        private boolean charttype;
+        private String title;
+        private String xtitle;
+        private String ytitle;
+        private double yref;
+
+        // Add getters and setters for new properties
+        public boolean isChartType() {
+            return charttype;
+        }
+    
+        public void setcharttype(boolean charttype) {
+            this.charttype = charttype;
+        }
+    
+        public String getTitle() {
+            return title;
+        }
+    
+        public void setTitle(String title) {
+            this.title = title;
+        }
+    
+        public String getXtitle() {
+            return xtitle;
+        }
+    
+        public void setXtitle(String xtitle) {
+            this.xtitle = xtitle;
+        }
+    
+        public String getYtitle() {
+            return ytitle;
+        }
+    
+        public void setYtitle(String ytitle) {
+            this.ytitle = ytitle;
+        }
+    
+        public double getYref() {
+            return yref;
+        }
+    
+        public void setYref(double yref) {
+            this.yref = yref;
+        }
 
         public PointStatistics(int reportPointId) {
             this.reportPointId = reportPointId;
@@ -494,6 +543,12 @@ public class ReportChartCreator {
             point = new PointStatistics(pointInfo.getReportPointId());
             point.setName(pointInfo.getExtendedName());
             point.setDataType(pointInfo.getDataType());
+            // Add values of new properties to points
+            point.setcharttype(pointInfo.isChartType());
+            point.setTitle(pointInfo.getTitle());
+            point.setXtitle(pointInfo.getXtitle());
+            point.setYtitle(pointInfo.getYtitle());
+            point.setYref(pointInfo.getYref());
             point.setDataTypeDescription(DataTypes.getDataTypeMessage(pointInfo.getDataType()).getLocalizedMessage(
                     bundle));
             point.setTextRenderer(pointInfo.getTextRenderer());
