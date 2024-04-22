@@ -292,7 +292,7 @@
             </tr>
             <tr id="usernameRow" style="display:none;">
               <td class="formLabelRequired"><fmt:message key="users.username"/></td>
-              <td class="formField"><input id="username" type="text"/></td>
+              <td class="formField"><input id="username" maxlength="20" type="text"/></td> <!-- update input field to accept max of 20 characters -->
             </tr>
             <tr>
               <td class="formLabelRequired"><fmt:message key="users.newPassword"/></td>

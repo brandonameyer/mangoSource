@@ -154,10 +154,15 @@ public class UserDao extends BaseDao {
                     user.getPhone(),
                     boolToChar(user.isAdmin()),
                     boolToChar(user.isDisabled()),
-                    user.getHomeUrl(),
+                    user.getHomeUrl() == null ? null : user.getHomeUrl(),
                     user.getReceiveAlarmEmails(),
                     boolToChar(user.isReceiveOwnAuditEvents()),
-                    user.getId() }
+                    user.getId() },
+                    new int[] {
+                        Types.VARCHAR, Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
+                        Types.VARCHAR, Types.VARCHAR, Types.VARCHAR,
+                        Types.INTEGER, Types.VARCHAR, Types.INTEGER
+                        }
                     );
         saveRelationalData(user);
     }
