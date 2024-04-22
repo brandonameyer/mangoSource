@@ -122,7 +122,9 @@ public class ReportWorkItem implements WorkItem {
                     // Should never happen since the colour would have been validated on save, so just let it go 
                     // as null.
                 }
-                points.add(new ReportDao.PointInfo(point, colour, reportPoint.isConsolidatedChart()));
+                // Add new properties to points using ReportDao.PointInfo getters
+                points.add(new ReportDao.PointInfo(point, colour, reportPoint.isConsolidatedChart(), reportPoint.isChartType(), reportPoint.getTitle(), 
+                reportPoint.getXtitle(), reportPoint.getYtitle(), reportPoint.getYref()));
             }
         }
 

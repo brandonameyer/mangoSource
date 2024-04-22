@@ -75,7 +75,8 @@
         reportPointsArray = new Array();
         for (var i=0; i<report.points.length; i++)
             addToReportPointsArray(report.points[i].pointId, report.points[i].colour,
-                    report.points[i].consolidatedChart);
+                    report.points[i].consolidatedChart, report.points[i].charttype, report.points[i].title, 
+                    report.points[i].xtitle, report.points[i].ytitle, report.points[i].yref); // new report properties added as arguments
         $set("includeEvents", report.includeEvents);
         $set("includeUserComments", report.includeUserComments);
         $set("dateRangeType", report.dateRangeType);
@@ -124,7 +125,8 @@
         writeReportPointsArray();
     }
     
-    function addToReportPointsArray(pointId, colour, consolidatedChart) {
+    // newly added properties added as arguments
+    function addToReportPointsArray(pointId, colour, consolidatedChart, charttype, title, xtitle, ytitle, yref) {
         var data = getPointData(pointId);
         if (data) {
             // Missing names imply that the point was deleted, so ignore.
@@ -133,7 +135,13 @@
                 pointName : data.name,
                 pointType : data.dataTypeMessage,
                 colour : !colour ? (!data.chartColour ? "" : data.chartColour) : colour,
-                consolidatedChart : consolidatedChart
+                consolidatedChart : consolidatedChart,
+                // new properties
+                charttype : charttype,
+                title : !title ? (!data.title ? "" : data.title) : title,
+                xtitle : !xtitle ? (!data.xtitle ? "" : data.xtitle) : xtitle,
+                ytitle : !ytitle ? (!data.ytitle ? "" : data.ytitle) : ytitle,
+                yref : yref
             };
         }
     }
@@ -167,6 +175,32 @@
                         return "<input type='checkbox'"+ (data.consolidatedChart ? " checked='checked'" : "") +
                                 " onclick='updatePointConsolidatedChart("+ data.pointId +", this.checked)'/>";
                     },
+                    // Added columns/inputs for chart type, title, x title, y title, and y reference line
+                    function(data) {
+                      updatePointcharttype(data.pointId, true)
+                      return "<input type='radio' name='chartType" + data.pointId + "' value='Line'" +
+                      (data.charttype !== 'Scatter' ? " checked='checked'" : "") +
+                      " onchange='updatePointcharttype(" + data.pointId + ", true)'/> Line" +
+                      "<input type='radio' name='chartType" + data.pointId + "' value='Scatter'" +
+                      (data.charttype === 'Scatter' ? " checked='checked'" : "") +
+                      " onchange='updatePointcharttype(" + data.pointId + ", false)'/> Scatter";
+                    },
+                    function(data) {
+                            return "<input type='text' maxlength='50' value='"+ data.title +"' "+
+                                    "onblur='updatePointTitle("+ data.pointId +", this.value)'/>";
+                    },
+                    function(data) {
+                            return "<input type='text' maxlength='50' value='"+ data.xtitle +"' "+
+                                    "onblur='updatePointxtitle("+ data.pointId +", this.value)'/>";
+                    },
+                    function(data) {
+                            return "<input type='text' maxlength='50' value='"+ data.ytitle +"' "+
+                                    "onblur='updatePointytitle("+ data.pointId +", this.value)'/>";
+                    },
+                    function(data) {
+                            return "<input type='number' maxlength='50' value='"+ data.yref +"' "+
+                                    "onblur='updatePointyref("+ data.pointId +", this.value)'/>";
+                    },
                     function(data) { 
                             return "<img src='images/bullet_delete.png' class='ptr' "+
                                     "onclick='removeFromReportPointsArray("+ data.pointId +")'/>";
@@ -199,6 +233,35 @@
         var item = getElement(reportPointsArray, pointId, "pointId");
         if (item)
             item["consolidatedChart"] = consolidatedChart;
+    }
+
+    // Added functions to update values for chart type, title, x title, y title, and y reference line
+    function updatePointcharttype(pointId, charttype) {
+        var item = getElement(reportPointsArray, pointId, "pointId");
+        if (item)
+            item["charttype"] = charttype;
+            console.log(charttype)
+    }
+    
+    function updatePointTitle(pointId, title) {
+        var item = getElement(reportPointsArray, pointId, "pointId");
+        if (item)
+            item["title"] = title;
+    }
+    function updatePointxtitle(pointId, xtitle) {
+        var item = getElement(reportPointsArray, pointId, "pointId");
+        if (item)
+            item["xtitle"] = xtitle;
+    }
+    function updatePointytitle(pointId, ytitle) {
+        var item = getElement(reportPointsArray, pointId, "pointId");
+        if (item)
+            item["ytitle"] = ytitle;
+    }
+    function updatePointyref(pointId, yref) {
+        var item = getElement(reportPointsArray, pointId, "pointId");
+        if (item)
+            item["yref"] = yref;
     }
     
     function updatePointsList() {
@@ -393,11 +456,14 @@
         display("emailRecipBody", email);
     }
     
+    //added new chart properties
     function getReportPointIdsArray() {
         var points = new Array();
         for (var i=0; i<reportPointsArray.length; i++)
             points[points.length] = { pointId: reportPointsArray[i].pointId, colour: reportPointsArray[i].colour,
-        		    consolidatedChart: reportPointsArray[i].consolidatedChart };
+        		    consolidatedChart: reportPointsArray[i].consolidatedChart, charttype: reportPointsArray[i].charttype,
+                title: reportPointsArray[i].title, xtitle: reportPointsArray[i].xtitle, ytitle: reportPointsArray[i].ytitle,
+                yref: reportPointsArray[i].yref };
         return points;
     }
     
@@ -584,7 +650,7 @@
                 
                 <table cellspacing="1">
                   <tbody id="reportPointsTableEmpty" style="display:none;">
-                    <tr><th colspan="4"><fmt:message key="reports.noPoints"/></th></tr>
+                    <tr><th colspan="9"><fmt:message key="reports.noPoints"/></th></tr> <!-- 9 columns needed for new properties-->
                   </tbody>
                   <tbody id="reportPointsTableHeaders" style="display:none;">
                     <tr class="smRowHeader">
@@ -592,6 +658,12 @@
                       <td><fmt:message key="reports.dataType"/></td>
                       <td><fmt:message key="reports.colour"/></td>
                       <td><fmt:message key="reports.consolidatedChart"/></td>
+                      <!-- new properties for report chart -->
+                      <td>Chart Type</td>
+                      <td>Title</td>
+                      <td>X Title</td>
+                      <td>Y Title</td>
+                      <td>Y Reference Line Type</td>
                       <td></td>
                     </tr>
                   </tbody>
